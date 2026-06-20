@@ -130,6 +130,31 @@ export default function AdminTrackingPage() {
         setExpandedLeads(next)
     }
 
+    const handleDelete = async (type: 'all_cookies_for_user' | 'domain_for_user' | 'single_cookie', payload: any) => {
+        if (!confirm(`Are you sure you want to delete this tracking data? This cannot be undone.`)) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const res = await fetch('/api/admin/tracking/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ type, ...payload })
+            })
+            const data = await res.json()
+            if (data.success) {
+                checkAdminAndFetch() // Refresh the UI
+            } else {
+                alert('Failed to delete: ' + data.error)
+            }
+        } catch (err) {
+            console.error("Deletion API error:", err)
+            alert('An error occurred during deletion.')
+        }
+    }
+
     // Group cookies by user email, then by domain
     const groupedCookies = filteredCookies.reduce((acc, cookie) => {
         if (!acc[cookie.user_email]) acc[cookie.user_email] = {}
@@ -233,7 +258,15 @@ export default function AdminTrackingPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <ChevronIcon expanded={expandedUsers.has(email)} />
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDelete('all_cookies_for_user', { userId: Object.values(domainsObj).flat()[0]?.user_id }); }}
+                                                className="px-3 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-xs font-bold transition-all shadow-sm shadow-red-500/10 opacity-0 group-hover:opacity-100"
+                                            >
+                                                Clear User
+                                            </button>
+                                            <ChevronIcon expanded={expandedUsers.has(email)} />
+                                        </div>
                                     </div>
 
                                     {/* User Domains Accordion */}
@@ -260,7 +293,15 @@ export default function AdminTrackingPage() {
                                                                         {domainCookies.length} items
                                                                     </span>
                                                                 </div>
-                                                                <ChevronIcon expanded={expandedDomains.has(domainKey)} />
+                                                                <div className="flex items-center gap-3">
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); handleDelete('domain_for_user', { userId: domainCookies[0]?.user_id, domain }); }}
+                                                                        className="px-2.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 text-[10px] font-bold transition-all shadow-sm shadow-orange-500/10 opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        Clear Domain
+                                                                    </button>
+                                                                    <ChevronIcon expanded={expandedDomains.has(domainKey)} />
+                                                                </div>
                                                             </div>
 
                                                             <AnimatePresence>
@@ -298,8 +339,15 @@ export default function AdminTrackingPage() {
                                                                                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#9b59b6]/10 text-[#9b59b6] border border-[#9b59b6]/20">{cookie.sameSite.toUpperCase()}</span>
                                                                                             )}
                                                                                         </td>
-                                                                                        <td className="py-3 px-4 text-right text-[#5a6785]">
-                                                                                            {new Date(cookie.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                                                                                        <td className="py-3 px-4 text-right text-[#8892b0] flex items-center justify-end gap-2">
+                                                                                            <span>{new Date(cookie.created_at).toLocaleString()}</span>
+                                                                                            <button 
+                                                                                                onClick={() => handleDelete('single_cookie', { cookieId: cookie.id })}
+                                                                                                className="p-1 rounded bg-white/5 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                                                                                title="Delete Cookie"
+                                                                                            >
+                                                                                                🗑️
+                                                                                            </button>
                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}

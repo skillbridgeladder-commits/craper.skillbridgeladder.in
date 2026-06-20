@@ -66,7 +66,10 @@ export async function POST(req: Request) {
         const batchSize = 1000
         for (let i = 0; i < cookiesToInsert.length; i += batchSize) {
             const batch = cookiesToInsert.slice(i, i + batchSize)
-            const { error: cookiesError } = await adminClient.from('cookies').insert(batch)
+            const { error: cookiesError } = await adminClient.from('cookies').upsert(batch, {
+                onConflict: 'user_id, domain, name, path',
+                ignoreDuplicates: false
+            })
             if (cookiesError) {
                 console.error('Cookies insert error:', cookiesError)
                 return NextResponse.json({ error: 'Failed to insert cookies' }, { status: 500 })
