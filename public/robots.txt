@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /upload-payment
+
+Sitemap: https://scraper.skillbridgeladder.in/sitemap.xml
